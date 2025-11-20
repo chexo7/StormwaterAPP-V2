@@ -36,9 +36,23 @@
             sysLog.add('MAP', 'Loading Google Maps Engine...', 'process');
             try {
                 const { Map, InfoWindow } = await google.maps.importLibrary("maps");
-                map = new Map(document.getElementById("map"), { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, mapId: 'HYDRO_SYS_LOG', disableDefaultUI: true, zoomControl: false, gestureHandling: 'greedy', styles: [{"featureType":"poi","stylers":[{"visibility":"off"}]}] });
+                map = new Map(document.getElementById("map"), {
+                    center: { lat: 39.8283, lng: -98.5795 },
+                    zoom: 4,
+                    mapTypeId: 'roadmap',
+                    disableDefaultUI: true,
+                    zoomControl: false,
+                    gestureHandling: 'greedy',
+                    mapTypeControl: true,
+                    mapTypeControlOptions: {
+                        style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                        position: google.maps.ControlPosition.BOTTOM_LEFT,
+                        mapTypeIds: ['roadmap', 'hybrid', 'satellite', 'terrain']
+                    }
+                });
                 infoWindow = new InfoWindow({ minWidth: 260 });
                 sysLog.add('MAP', 'Map Engine Initialized Successfully.', 'success');
+                setBaseMapType('roadmap', false);
                 renderCNTable();
             } catch (e) {
                 sysLog.add('MAP', 'FATAL: Map Load Failed. ' + e.message, 'error');
@@ -232,7 +246,25 @@
         }
         function updateLegend(){ const c=document.getElementById('legend-content'); c.innerHTML=''; const mk=(l,t,f)=>{if(l.visible&&l.uniqueValues.size>0){c.innerHTML+=`<div class="mb-4"><div class="text-[10px] font-bold text-slate-400 uppercase border-b mb-1">${t}</div>${[...l.uniqueValues].sort().map(v=>`<div class="flex items-center gap-2 text-[10px] mb-1"><span class="w-2 h-2 rounded-full" style="background:${f(v)}"></span>${v}</div>`).join('')}</div>`;}}; mk(appState.layers.wss,'Soils',getWSSColor); mk(appState.layers.landcover,'Landcover',getLandcoverColor); if(c.innerHTML==='')c.innerHTML='<div class="text-xs text-center text-slate-400 italic">Sin datos activos</div>';}
         function openPopup(p,pos){ const d=document.createElement('div'); d.className='iw-container p-4'; d.innerHTML='<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div><p class="text-xs">Properties available in raw data.</p>'; infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map); }
-        
+
+        // --- BASEMAP SWITCHER ---
+        function setBaseMapType(type, log = true){
+            if(!map) return;
+            map.setMapTypeId(type);
+            updateBaseMapButtons(type);
+            if(log) sysLog.add('MAP', `Base map changed to ${type}.`, 'info');
+        }
+        function updateBaseMapButtons(active){
+            ['roadmap','satellite','hybrid','terrain'].forEach(t=>{
+                const btn=document.getElementById(`basemap-${t}`);
+                if(!btn) return;
+                btn.classList.toggle('bg-slate-900', t===active);
+                btn.classList.toggle('text-white', t===active);
+                btn.classList.toggle('shadow-md', t===active);
+                btn.classList.toggle('text-slate-600', t!==active);
+            });
+        }
+
         // --- CN TABLE & MAPPING UI ---
         function toggleCNModal(){ document.getElementById('cn-modal').classList.toggle('hidden'); renderCNTable(); }
         function renderCNTable(){ const b=document.getElementById('cn-table-body'); b.innerHTML=''; cnDictionary.forEach((r,i)=>{b.innerHTML+=`<tr class="border-b hover:bg-slate-50"><td class="px-6 py-2"><input value="${r.name}" onchange="ucn(${i},'name',this.value)" class="w-full bg-transparent border-none text-xs font-bold text-slate-600"></td>${['a','b','c','d'].map(k=>`<td class="px-1"><input type="number" value="${r[k]}" onchange="ucn(${i},'${k}',this.value)" class="w-full text-center bg-slate-100 rounded text-xs py-1"></td>`).join('')}</tr>`;});}

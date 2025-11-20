@@ -39,6 +39,23 @@ export const legacyMarkup = `<!-- MAP CANVAS -->
 </div>
 </div>
 </nav>
+<!-- BASEMAP SWITCHER -->
+<div class="absolute top-24 right-4 z-30 pointer-events-auto">
+  <div class="bg-white/90 backdrop-blur border border-slate-200 rounded-xl shadow-lg shadow-slate-200/40 flex divide-x divide-slate-200 overflow-hidden">
+    <button id="basemap-roadmap" class="px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition" onclick="setBaseMapType('roadmap')">
+      <span class="material-symbols-rounded align-middle text-base mr-1">map</span>Mapa
+    </button>
+    <button id="basemap-satellite" class="px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition" onclick="setBaseMapType('satellite')">
+      <span class="material-symbols-rounded align-middle text-base mr-1">globe_asia</span>Satélite
+    </button>
+    <button id="basemap-hybrid" class="px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition" onclick="setBaseMapType('hybrid')">
+      <span class="material-symbols-rounded align-middle text-base mr-1">satellite_alt</span>Híbrido
+    </button>
+    <button id="basemap-terrain" class="px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition hidden md:inline-flex items-center" onclick="setBaseMapType('terrain')">
+      <span class="material-symbols-rounded align-middle text-base mr-1">landscape</span>Terreno
+    </button>
+  </div>
+</div>
 <!-- LEFT SIDEBAR (Layers) -->
 <aside class="absolute top-24 left-4 bottom-6 w-80 z-20 sidebar-transition transform -translate-x-[110%] md:translate-x-0 flex flex-col gap-4 pointer-events-none" id="sidebar-left">
 <div class="glass rounded-2xl flex-1 flex flex-col overflow-hidden shadow-xl pointer-events-auto ring-1 ring-black/5">
