@@ -444,9 +444,9 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
                 if(type==='wss'||type==='landcover'){ val=f.properties._standardVal; layer.uniqueValues.add(String(val)); }
                 const s = getStyle(type, val);
                 const poly = new Polygon({ paths, strokeColor:s.s, strokeOpacity:1, strokeWeight:s.w, fillColor:s.f, fillOpacity:s.o, zIndex:layer.zIndex, map:map, clickable:(type==='drainage'||type==='sub')});
-                
-                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,data:{}}, e.latLng));
-                layer.polygons.push({poly});
+
+                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,feature:f}, e.latLng));
+                layer.polygons.push({poly, feature:f});
                 paths.flat().forEach(p=>b.extend(p));
             });
             if(!b.isEmpty()) map.fitBounds(b);
@@ -537,7 +537,77 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
             if(t==='landcover')return{s:'#fff',f:getLandcoverColor(v),o:0.7,w:0.5};
         }
         function updateLegend(){ const c=document.getElementById('legend-content'); c.innerHTML=''; const mk=(l,t,f)=>{if(l.visible&&l.uniqueValues.size>0){c.innerHTML+=`<div class="mb-4"><div class="text-[10px] font-bold text-slate-400 uppercase border-b mb-1">${t}</div>${[...l.uniqueValues].sort().map(v=>`<div class="flex items-center gap-2 text-[10px] mb-1"><span class="w-2 h-2 rounded-full" style="background:${f(v)}"></span>${v}</div>`).join('')}</div>`;}}; mk(appState.layers.wss,'Soils',getWSSColor); mk(appState.layers.landcover,'Landcover',getLandcoverColor); if(c.innerHTML==='')c.innerHTML='<div class="text-xs text-center text-slate-400 italic">Sin datos activos</div>';}
-        function openPopup(p,pos){ const d=document.createElement('div'); d.className='iw-container p-4'; d.innerHTML='<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div><p class="text-xs">Properties available in raw data.</p>'; infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map); }
+        function openPopup(p,pos){
+            const props = p.feature?.properties || {};
+            const esc = v=>String(v??'').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+
+            const d=document.createElement('div');
+            d.className='iw-container p-4 min-w-[260px] max-w-[320px]';
+
+            const drainageSelect = () => {
+                const current = props.dischargePoint || '';
+                const opts = Array.from({length:5},(_,i)=>`<option value="DP-${i+1}" ${current===`DP-${i+1}`?'selected':''}>DP-${i+1}</option>`).join('');
+                return `
+                    <div class="text-xs font-bold text-indigo-600 border-b mb-2">Drainage Area</div>
+                    <label class="text-[11px] text-slate-500 font-semibold flex flex-col gap-1">
+                        <span>Discharge Point</span>
+                        <select id="popup-dp" class="border rounded px-2 py-1 text-xs">${opts}</select>
+                    </label>
+                    <div class="flex justify-end gap-2 mt-3">
+                        <button id="popup-save" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded shadow hover:bg-indigo-700">Guardar</button>
+                        <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
+                    </div>`;
+            };
+
+            const subSelect = () => {
+                const drainagePolys = appState.layers.drainage.polygons;
+                const hasDrainage = drainagePolys.length>0 && drainagePolys.every(p=>p.feature?.properties?.dischargePoint);
+                const current = props.drainageArea || '';
+                const opts = Array.from({length:10},(_,i)=>`<option value="Drainage Area - ${i+1}" ${current===`Drainage Area - ${i+1}`?'selected':''}>Drainage Area - ${i+1}</option>`).join('');
+                return `
+                    <div class="text-xs font-bold text-indigo-600 border-b mb-2">Sub Area</div>
+                    ${hasDrainage ? '' : '<div class="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded p-2 mb-2">Complete primero los puntos de descarga de las Drainage Areas para habilitar esta selección.</div>'}
+                    <label class="text-[11px] text-slate-500 font-semibold flex flex-col gap-1">
+                        <span>Drainage Area</span>
+                        <select id="popup-da" class="border rounded px-2 py-1 text-xs" ${hasDrainage?'':'disabled'}>
+                            <option value="">Seleccione...</option>
+                            ${opts}
+                        </select>
+                    </label>
+                    <div class="flex justify-end gap-2 mt-3">
+                        <button id="popup-save" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded shadow hover:bg-indigo-700" ${hasDrainage?'':'disabled'}>Guardar</button>
+                        <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
+                    </div>`;
+            };
+
+            if(p.type==='drainage') d.innerHTML = drainageSelect();
+            else if(p.type==='sub') d.innerHTML = subSelect();
+            else return;
+
+            infoWindow.setContent(d);
+            infoWindow.setPosition(pos);
+            infoWindow.open(map);
+
+            const closeBtn=d.querySelector('#popup-close');
+            if(closeBtn) closeBtn.addEventListener('click',()=>infoWindow.close());
+
+            const saveBtn=d.querySelector('#popup-save');
+            if(saveBtn && p.feature){
+                saveBtn.addEventListener('click',()=>{
+                    if(p.type==='drainage'){
+                        const dp = d.querySelector('#popup-dp')?.value || '';
+                        p.feature.properties.dischargePoint = dp;
+                        sysLog.add('GIS', `Drainage DP seteado a ${esc(dp)}`, 'success');
+                    }
+                    if(p.type==='sub'){
+                        const da = d.querySelector('#popup-da')?.value || '';
+                        p.feature.properties.drainageArea = da;
+                        sysLog.add('GIS', `Sub Area asociada a ${esc(da)}`, 'success');
+                    }
+                    infoWindow.close();
+                });
+            }
+        }
         
         // --- CN TABLE & MAPPING UI ---
         function toggleCNModal(){ document.getElementById('cn-modal').classList.toggle('hidden'); renderCNTable(); }
