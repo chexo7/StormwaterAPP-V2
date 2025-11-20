@@ -159,9 +159,10 @@
                 if(type==='wss'||type==='landcover'){ val=f.properties._standardVal; layer.uniqueValues.add(String(val)); }
                 const s = getStyle(type, val);
                 const poly = new Polygon({ paths, strokeColor:s.s, strokeOpacity:1, strokeWeight:s.w, fillColor:s.f, fillOpacity:s.o, zIndex:layer.zIndex, map:map, clickable:(type==='drainage'||type==='sub')});
-                
-                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,data:{}}, e.latLng));
-                layer.polygons.push({poly});
+
+                const feature = { poly, type, properties: f.properties || {} };
+                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup(feature, e.latLng));
+                layer.polygons.push(feature);
                 paths.flat().forEach(p=>b.extend(p));
             });
             if(!b.isEmpty()) map.fitBounds(b);
@@ -252,7 +253,24 @@
             if(t==='landcover')return{s:'#fff',f:getLandcoverColor(v),o:0.7,w:0.5};
         }
         function updateLegend(){ const c=document.getElementById('legend-content'); c.innerHTML=''; const mk=(l,t,f)=>{if(l.visible&&l.uniqueValues.size>0){c.innerHTML+=`<div class="mb-4"><div class="text-[10px] font-bold text-slate-400 uppercase border-b mb-1">${t}</div>${[...l.uniqueValues].sort().map(v=>`<div class="flex items-center gap-2 text-[10px] mb-1"><span class="w-2 h-2 rounded-full" style="background:${f(v)}"></span>${v}</div>`).join('')}</div>`;}}; mk(appState.layers.wss,'Soils',getWSSColor); mk(appState.layers.landcover,'Landcover',getLandcoverColor); if(c.innerHTML==='')c.innerHTML='<div class="text-xs text-center text-slate-400 italic">Sin datos activos</div>';}
-        function openPopup(p,pos){ const d=document.createElement('div'); d.className='iw-container p-4'; d.innerHTML='<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div><p class="text-xs">Properties available in raw data.</p>'; infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map); }
+        function openPopup(p,pos){
+            const escapeHtml = v => String(v ?? 'N/A').replace(/[&<>"']/g, c => ({
+                '&':'&amp;',
+                '<':'&lt;',
+                '>':'&gt;',
+                '"':'&quot;',
+                "'":'&#39;'
+            }[c]);
+            const entries = Object.entries(p?.properties || {}).filter(([k])=>k!=="_standardVal");
+            const rows = entries.map(([k,v])=>`<div class="flex items-start gap-2 text-[11px]"><span class="text-[10px] font-semibold text-slate-500 w-24 break-words">${escapeHtml(k)}</span><span class="text-[11px] text-slate-700 break-words">${escapeHtml(v)}</span></div>`).join('');
+            const d=document.createElement('div');
+            d.className='iw-container p-4 max-w-[280px]';
+            d.innerHTML=`<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div>
+                <div class="text-[10px] text-slate-400 mb-2">Capa: ${(p?.type||'N/A').toUpperCase()}</div>
+                ${rows || '<p class="text-xs text-slate-500">No se encontraron propiedades en este polígono.</p>'}
+                <p class="text-[10px] text-slate-400 mt-3">Usa estos atributos para validar o asignar nombres requeridos.</p>`;
+            infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map);
+        }
         
         // --- CN TABLE & MAPPING UI ---
         function toggleCNModal(){ document.getElementById('cn-modal').classList.toggle('hidden'); renderCNTable(); }
