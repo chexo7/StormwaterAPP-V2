@@ -28,6 +28,7 @@
         ]; // (Truncated for brevity, add all 21 if needed in prod)
 
         const appState = { layers: { overall: { visible: true, polygons: [], rawFeatures: null, zIndex: 50 }, sub: { visible: true, polygons: [], rawFeatures: null, zIndex: 40 }, drainage: { visible: true, polygons: [], rawFeatures: null, zIndex: 30 }, wss: { visible: true, polygons: [], rawFeatures: null, zIndex: 20, uniqueValues: new Set() }, landcover: { visible: true, polygons: [], rawFeatures: null, zIndex: 10, uniqueValues: new Set() }, mosaic: { visible: false, polygons: [], zIndex: 60 } }, options: { drainage: [], sub: [] }, pendingGeoJSON: null, invalidValues: [] };
+        const mapConfig = window.__HYDRO_MAP_CONFIG || {};
         let map, infoWindow;
 
         // --- MAP & INIT ---
@@ -36,7 +37,10 @@
             sysLog.add('MAP', 'Loading Google Maps Engine...', 'process');
             try {
                 const { Map, InfoWindow } = await google.maps.importLibrary("maps");
-                map = new Map(document.getElementById("map"), { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, mapId: 'HYDRO_SYS_LOG', disableDefaultUI: true, zoomControl: false, gestureHandling: 'greedy', styles: [{"featureType":"poi","stylers":[{"visibility":"off"}]}] });
+                const mapOptions = { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, disableDefaultUI: true, zoomControl: false, gestureHandling: 'greedy' };
+                if(mapConfig.mapId){ mapOptions.mapId = mapConfig.mapId; }
+                else { mapOptions.styles = [{"featureType":"poi","stylers":[{"visibility":"off"}]}]; }
+                map = new Map(document.getElementById("map"), mapOptions);
                 infoWindow = new InfoWindow({ minWidth: 260 });
                 sysLog.add('MAP', 'Map Engine Initialized Successfully.', 'success');
                 renderCNTable();
