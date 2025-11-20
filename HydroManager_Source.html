@@ -566,7 +566,9 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
                 const drainageFeatures = appState.layers.drainage.polygons.map(p=>p.feature).filter(Boolean);
                 const missingDP = drainageFeatures.length===0 || drainageFeatures.some(f=>!f.properties?.dischargePoint);
                 const options = Array.from({length:10},(_,i)=>`Drainage Area - ${i+1}`);
+                const dischargePointOptions = [...new Set(drainageFeatures.map(f=>f.properties?.dischargePoint).filter(Boolean))];
                 const current = props.drainageAreaRef || '';
+                const currentDP = props.dischargePointRef || '';
                 d.innerHTML=`
                     <div class="text-xs font-bold text-amber-600 border-b mb-2">Sub Area</div>
                     ${missingDP?`<div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded p-2 mb-2">Seleccione los Discharge Point de todas las Drainage Areas antes de continuar.</div>`:''}
@@ -575,6 +577,13 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
                         <select id="popup-da" class="border rounded px-2 py-1 text-xs" ${missingDP?'disabled':''}>
                             <option value="">Seleccione área</option>
                             ${options.map(o=>`<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label class="text-[11px] text-slate-500 font-semibold flex flex-col gap-1 mb-3">
+                        <span>Discharge Point</span>
+                        <select id="popup-sub-dp" class="border rounded px-2 py-1 text-xs" ${missingDP?'disabled':''}>
+                            <option value="">Seleccione DP</option>
+                            ${dischargePointOptions.map(o=>`<option value="${o}" ${o===currentDP?'selected':''}>${o}</option>`).join('')}
                         </select>
                     </label>
                     <div class="flex justify-end">
@@ -610,6 +619,16 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
                             const val = daSel.value.trim();
                             p.feature.properties.drainageAreaRef = val || '';
                             sysLog.add('GIS', `Sub Area vinculada a ${esc(p.feature.properties.drainageAreaRef||'N/A')}`, 'success');
+                        }
+                    });
+                }
+                const dpSel = d.querySelector('#popup-sub-dp');
+                if(dpSel && !dpSel.disabled){
+                    dpSel.addEventListener('change',()=>{
+                        if(p.feature){
+                            const val = dpSel.value.trim();
+                            p.feature.properties.dischargePointRef = val || '';
+                            sysLog.add('GIS', `Discharge Point del Sub Area: ${esc(p.feature.properties.dischargePointRef||'N/A')}`, 'success');
                         }
                     });
                 }
