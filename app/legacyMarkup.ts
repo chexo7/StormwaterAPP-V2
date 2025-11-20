@@ -39,6 +39,20 @@ export const legacyMarkup = `<!-- MAP CANVAS -->
 </div>
 </div>
 </nav>
+<!-- BASEMAP SWITCHER -->
+<div class="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-[95%] max-w-7xl pointer-events-none">
+<div class="flex justify-start md:justify-end">
+<div class="glass rounded-2xl shadow-lg ring-1 ring-black/5 p-3 bg-white/70 backdrop-blur pointer-events-auto w-full md:w-auto">
+<div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2"><span class="material-symbols-rounded text-sm text-slate-400">layers</span> Mapas base</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="basemap-switcher">
+<button class="basemap-btn bg-white/70 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold py-2 px-3 flex items-center justify-center gap-2 transition" data-basemap="default"><span class="material-symbols-rounded text-sm">map</span>Mapa</button>
+<button class="basemap-btn bg-white/70 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold py-2 px-3 flex items-center justify-center gap-2 transition" data-basemap="satellite"><span class="material-symbols-rounded text-sm">satellite_alt</span>Satélite</button>
+<button class="basemap-btn bg-white/70 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold py-2 px-3 flex items-center justify-center gap-2 transition" data-basemap="hybrid"><span class="material-symbols-rounded text-sm">layers</span>Híbrido</button>
+<button class="basemap-btn bg-white/70 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold py-2 px-3 flex items-center justify-center gap-2 transition" data-basemap="terrain"><span class="material-symbols-rounded text-sm">terrain</span>Terreno</button>
+</div>
+</div>
+</div>
+</div>
 <!-- LEFT SIDEBAR (Layers) -->
 <aside class="absolute top-24 left-4 bottom-6 w-80 z-20 sidebar-transition transform -translate-x-[110%] md:translate-x-0 flex flex-col gap-4 pointer-events-none" id="sidebar-left">
 <div class="glass rounded-2xl flex-1 flex flex-col overflow-hidden shadow-xl pointer-events-auto ring-1 ring-black/5">
