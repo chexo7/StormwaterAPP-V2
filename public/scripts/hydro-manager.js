@@ -158,10 +158,12 @@
                 let val=null;
                 if(type==='wss'||type==='landcover'){ val=f.properties._standardVal; layer.uniqueValues.add(String(val)); }
                 const s = getStyle(type, val);
+                const featureData = { poly: null, properties: f.properties || {}, type };
                 const poly = new Polygon({ paths, strokeColor:s.s, strokeOpacity:1, strokeWeight:s.w, fillColor:s.f, fillOpacity:s.o, zIndex:layer.zIndex, map:map, clickable:(type==='drainage'||type==='sub')});
-                
-                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,data:{}}, e.latLng));
-                layer.polygons.push({poly});
+                featureData.poly = poly;
+
+                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup(featureData, e.latLng));
+                layer.polygons.push(featureData);
                 paths.flat().forEach(p=>b.extend(p));
             });
             if(!b.isEmpty()) map.fitBounds(b);
@@ -252,7 +254,15 @@
             if(t==='landcover')return{s:'#fff',f:getLandcoverColor(v),o:0.7,w:0.5};
         }
         function updateLegend(){ const c=document.getElementById('legend-content'); c.innerHTML=''; const mk=(l,t,f)=>{if(l.visible&&l.uniqueValues.size>0){c.innerHTML+=`<div class="mb-4"><div class="text-[10px] font-bold text-slate-400 uppercase border-b mb-1">${t}</div>${[...l.uniqueValues].sort().map(v=>`<div class="flex items-center gap-2 text-[10px] mb-1"><span class="w-2 h-2 rounded-full" style="background:${f(v)}"></span>${v}</div>`).join('')}</div>`;}}; mk(appState.layers.wss,'Soils',getWSSColor); mk(appState.layers.landcover,'Landcover',getLandcoverColor); if(c.innerHTML==='')c.innerHTML='<div class="text-xs text-center text-slate-400 italic">Sin datos activos</div>';}
-        function openPopup(p,pos){ const d=document.createElement('div'); d.className='iw-container p-4'; d.innerHTML='<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div><p class="text-xs">Properties available in raw data.</p>'; infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map); }
+        function openPopup(p,pos){
+            const d=document.createElement('div'); d.className='iw-container p-4';
+            const entries = Object.entries(p?.properties||{}).filter(([_,v])=>v!==undefined&&v!==null&&String(v).trim()!=='');
+            const content = entries.length>0
+                ? entries.map(([k,v])=>`<div class="flex justify-between gap-2 text-[11px] py-1 border-b last:border-b-0"><span class="font-mono uppercase text-slate-500">${k}</span><span class="text-right break-all">${v}</span></div>`).join('')
+                : '<div class="text-xs text-slate-500">No properties found for this feature.</div>';
+            d.innerHTML=`<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div>${content}`;
+            infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map);
+        }
         
         // --- CN TABLE & MAPPING UI ---
         function toggleCNModal(){ document.getElementById('cn-modal').classList.toggle('hidden'); renderCNTable(); }
