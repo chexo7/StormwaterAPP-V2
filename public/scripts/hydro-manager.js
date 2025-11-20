@@ -28,7 +28,24 @@
         ]; // (Truncated for brevity, add all 21 if needed in prod)
 
         const appState = { layers: { overall: { visible: true, polygons: [], rawFeatures: null, zIndex: 50 }, sub: { visible: true, polygons: [], rawFeatures: null, zIndex: 40 }, drainage: { visible: true, polygons: [], rawFeatures: null, zIndex: 30 }, wss: { visible: true, polygons: [], rawFeatures: null, zIndex: 20, uniqueValues: new Set() }, landcover: { visible: true, polygons: [], rawFeatures: null, zIndex: 10, uniqueValues: new Set() }, mosaic: { visible: false, polygons: [], zIndex: 60 } }, options: { drainage: [], sub: [] }, pendingGeoJSON: null, invalidValues: [] };
-        let map, infoWindow;
+        const defaultMapId = 'HYDRO_SYS_LOG';
+        const baseMapOptions = { default: { label: 'Mapa', mapTypeId: 'roadmap', mapId: defaultMapId }, satellite: { label: 'Satélite', mapTypeId: 'satellite' }, hybrid: { label: 'Híbrido', mapTypeId: 'hybrid' }, terrain: { label: 'Terreno', mapTypeId: 'terrain' } };
+        let map, infoWindow, activeBaseMap = 'default';
+        const baseLayerButtons = () => document.querySelectorAll('[data-basemap]');
+        function highlightBaseMapButton(key){ baseLayerButtons().forEach(btn=>{ const a=btn.dataset.basemap===key; btn.classList.toggle('bg-slate-900',a); btn.classList.toggle('text-white',a); btn.classList.toggle('shadow-lg',a); btn.classList.toggle('border-slate-900',a); btn.classList.toggle('bg-white/70',!a); btn.classList.toggle('text-slate-700',!a); btn.classList.toggle('border-slate-200',!a); }); }
+
+        function setBaseMap(key){
+            if(!map) return;
+            const cfg = baseMapOptions[key] || baseMapOptions.default;
+            activeBaseMap = key in baseMapOptions ? key : 'default';
+            const opts = { mapTypeId: cfg.mapTypeId };
+            opts.mapId = cfg.mapTypeId === 'roadmap' ? cfg.mapId : undefined;
+            map.setOptions(opts);
+            highlightBaseMapButton(activeBaseMap);
+            sysLog.add('MAP', `Base map: ${cfg.label}`, 'info');
+        }
+
+        function initBaseMapControls(){ baseLayerButtons().forEach(btn=>btn.addEventListener('click',()=>setBaseMap(btn.dataset.basemap))); }
 
         // --- MAP & INIT ---
         async function initMap() {
@@ -36,8 +53,12 @@
             sysLog.add('MAP', 'Loading Google Maps Engine...', 'process');
             try {
                 const { Map, InfoWindow } = await google.maps.importLibrary("maps");
-                map = new Map(document.getElementById("map"), { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, mapId: 'HYDRO_SYS_LOG', disableDefaultUI: true, zoomControl: false, gestureHandling: 'greedy', styles: [{"featureType":"poi","stylers":[{"visibility":"off"}]}] });
+                const options = { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, disableDefaultUI: true, zoomControl: true, gestureHandling: 'greedy', mapTypeControl: false, mapTypeId: baseMapOptions[activeBaseMap].mapTypeId };
+                if (baseMapOptions[activeBaseMap].mapId) options.mapId = baseMapOptions[activeBaseMap].mapId;
+                map = new Map(document.getElementById("map"), options);
                 infoWindow = new InfoWindow({ minWidth: 260 });
+                initBaseMapControls();
+                setBaseMap(activeBaseMap);
                 sysLog.add('MAP', 'Map Engine Initialized Successfully.', 'success');
                 renderCNTable();
             } catch (e) {
