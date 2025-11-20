@@ -160,8 +160,8 @@
                 const s = getStyle(type, val);
                 const poly = new Polygon({ paths, strokeColor:s.s, strokeOpacity:1, strokeWeight:s.w, fillColor:s.f, fillOpacity:s.o, zIndex:layer.zIndex, map:map, clickable:(type==='drainage'||type==='sub')});
                 
-                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,data:{}}, e.latLng));
-                layer.polygons.push({poly});
+                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,feature:f}, e.latLng));
+                layer.polygons.push({poly, feature:f});
                 paths.flat().forEach(p=>b.extend(p));
             });
             if(!b.isEmpty()) map.fitBounds(b);
@@ -252,7 +252,92 @@
             if(t==='landcover')return{s:'#fff',f:getLandcoverColor(v),o:0.7,w:0.5};
         }
         function updateLegend(){ const c=document.getElementById('legend-content'); c.innerHTML=''; const mk=(l,t,f)=>{if(l.visible&&l.uniqueValues.size>0){c.innerHTML+=`<div class="mb-4"><div class="text-[10px] font-bold text-slate-400 uppercase border-b mb-1">${t}</div>${[...l.uniqueValues].sort().map(v=>`<div class="flex items-center gap-2 text-[10px] mb-1"><span class="w-2 h-2 rounded-full" style="background:${f(v)}"></span>${v}</div>`).join('')}</div>`;}}; mk(appState.layers.wss,'Soils',getWSSColor); mk(appState.layers.landcover,'Landcover',getLandcoverColor); if(c.innerHTML==='')c.innerHTML='<div class="text-xs text-center text-slate-400 italic">Sin datos activos</div>';}
-        function openPopup(p,pos){ const d=document.createElement('div'); d.className='iw-container p-4'; d.innerHTML='<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div><p class="text-xs">Properties available in raw data.</p>'; infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map); }
+        function openPopup(ctx,pos){
+            const props = ctx?.feature?.properties || ctx?.data || {};
+            const d=document.createElement('div');
+            d.className='iw-container p-4 space-y-3 max-w-xs';
+
+            const title=document.createElement('div');
+            title.className='text-xs font-bold text-indigo-600 border-b pb-2';
+            title.textContent='Feature Info';
+            d.appendChild(title);
+
+            const list=document.createElement('div');
+            list.className='space-y-1 max-h-40 overflow-auto pr-1';
+            const renderProps=()=>{
+                list.innerHTML='';
+                const entries=Object.entries(props||{});
+                if(entries.length===0){
+                    const empty=document.createElement('p');
+                    empty.className='text-[11px] text-slate-500';
+                    empty.textContent='No hay propiedades en este polígono.';
+                    list.appendChild(empty);
+                    return;
+                }
+                entries.forEach(([k,v])=>{
+                    const row=document.createElement('div');
+                    row.className='flex items-center justify-between gap-2 text-[11px]';
+                    const key=document.createElement('span');
+                    key.className='font-semibold text-slate-600 truncate';
+                    key.textContent=k;
+                    const val=document.createElement('span');
+                    val.className='text-slate-500 text-right flex-1 truncate';
+                    val.textContent=v??'';
+                    row.append(key,val);
+                    list.appendChild(row);
+                });
+            };
+            renderProps();
+            d.appendChild(list);
+
+            const editableKey = ctx?.type==='sub'?'subName':ctx?.type==='drainage'?'drainName':null;
+            if(editableKey){
+                const editor=document.createElement('div');
+                editor.className='pt-3 border-t border-slate-200 space-y-2';
+
+                const lbl=document.createElement('label');
+                lbl.className='text-[11px] font-semibold text-slate-600 flex items-center gap-1';
+                lbl.textContent=ctx.type==='sub'?'Nombre de subcuenca':'Nombre de drenaje';
+                editor.appendChild(lbl);
+
+                const input=document.createElement('input');
+                input.type='text';
+                input.value=props[editableKey]||'';
+                input.placeholder='Ej: Sub-01';
+                input.className='w-full border border-slate-200 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-200';
+                input.dataset.propInput=editableKey;
+                editor.appendChild(input);
+
+                const helper=document.createElement('p');
+                helper.className='text-[10px] text-slate-400';
+                helper.textContent='Guarda un nombre para identificar el polígono en los resultados.';
+                editor.appendChild(helper);
+
+                const saveBtn=document.createElement('button');
+                saveBtn.type='button';
+                saveBtn.className='w-full bg-indigo-600 text-white text-xs font-semibold rounded py-2 hover:bg-indigo-700 transition';
+                saveBtn.textContent='Guardar propiedad';
+                saveBtn.dataset.propSave='true';
+                editor.appendChild(saveBtn);
+
+                saveBtn.addEventListener('click',()=>{
+                    const val=input.value.trim();
+                    if(ctx?.feature?.properties){
+                        if(val){ ctx.feature.properties[editableKey]=val; }
+                        else { delete ctx.feature.properties[editableKey]; }
+                        renderProps();
+                        sysLog.add('GIS', `Propiedad ${editableKey} actualizada para ${ctx.type}.`, 'success');
+                        infoWindow.close();
+                    }
+                });
+
+                d.appendChild(editor);
+            }
+
+            infoWindow.setContent(d);
+            infoWindow.setPosition(pos);
+            infoWindow.open(map);
+        }
         
         // --- CN TABLE & MAPPING UI ---
         function toggleCNModal(){ document.getElementById('cn-modal').classList.toggle('hidden'); renderCNTable(); }
