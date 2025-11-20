@@ -558,8 +558,7 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
                             ${options.map(o=>`<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('')}
                         </select>
                     </label>
-                    <div class="flex justify-end gap-2">
-                        <button id="popup-save" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded shadow hover:bg-indigo-700">Guardar</button>
+                    <div class="flex justify-end">
                         <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
                     </div>
                 `;
@@ -578,8 +577,7 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
                             ${options.map(o=>`<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('')}
                         </select>
                     </label>
-                    <div class="flex justify-end gap-2">
-                        <button id="popup-save" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded shadow hover:bg-indigo-700" ${missingDP?'disabled':''}>Guardar</button>
+                    <div class="flex justify-end">
                         <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
                     </div>
                 `;
@@ -592,27 +590,29 @@ a);requestAnimationFrame(function(){g(document.body)})})}var l=["material-icons"
             const closeBtn=d.querySelector('#popup-close');
             if(closeBtn) closeBtn.addEventListener('click',()=>infoWindow.close());
 
-            const saveBtn=d.querySelector('#popup-save');
-            if(saveBtn){
-                saveBtn.addEventListener('click',()=>{
-                    if(isDrainage){
-                        const dpSel = d.querySelector('#popup-dp');
-                        if(dpSel && p.feature){
+            if(isDrainage){
+                const dpSel = d.querySelector('#popup-dp');
+                if(dpSel){
+                    dpSel.addEventListener('change',()=>{
+                        if(p.feature){
                             const val = dpSel.value.trim();
                             p.feature.properties.dischargePoint = val || '';
                             sysLog.add('GIS', `Discharge Point asignado: ${esc(p.feature.properties.dischargePoint||'N/A')}`, 'success');
                         }
-                    }
-                    if(isSub){
-                        const daSel = d.querySelector('#popup-da');
-                        if(daSel && p.feature && !daSel.disabled){
+                    });
+                }
+            }
+            if(isSub){
+                const daSel = d.querySelector('#popup-da');
+                if(daSel && !daSel.disabled){
+                    daSel.addEventListener('change',()=>{
+                        if(p.feature){
                             const val = daSel.value.trim();
                             p.feature.properties.drainageAreaRef = val || '';
                             sysLog.add('GIS', `Sub Area vinculada a ${esc(p.feature.properties.drainageAreaRef||'N/A')}`, 'success');
                         }
-                    }
-                    infoWindow.close();
-                });
+                    });
+                }
             }
         }
         
