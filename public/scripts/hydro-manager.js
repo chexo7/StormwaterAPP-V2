@@ -159,9 +159,9 @@
                 if(type==='wss'||type==='landcover'){ val=f.properties._standardVal; layer.uniqueValues.add(String(val)); }
                 const s = getStyle(type, val);
                 const poly = new Polygon({ paths, strokeColor:s.s, strokeOpacity:1, strokeWeight:s.w, fillColor:s.f, fillOpacity:s.o, zIndex:layer.zIndex, map:map, clickable:(type==='drainage'||type==='sub')});
-                
-                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,data:{}}, e.latLng));
-                layer.polygons.push({poly});
+
+                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,feature:f}, e.latLng));
+                layer.polygons.push({poly, feature:f});
                 paths.flat().forEach(p=>b.extend(p));
             });
             if(!b.isEmpty()) map.fitBounds(b);
@@ -252,7 +252,55 @@
             if(t==='landcover')return{s:'#fff',f:getLandcoverColor(v),o:0.7,w:0.5};
         }
         function updateLegend(){ const c=document.getElementById('legend-content'); c.innerHTML=''; const mk=(l,t,f)=>{if(l.visible&&l.uniqueValues.size>0){c.innerHTML+=`<div class="mb-4"><div class="text-[10px] font-bold text-slate-400 uppercase border-b mb-1">${t}</div>${[...l.uniqueValues].sort().map(v=>`<div class="flex items-center gap-2 text-[10px] mb-1"><span class="w-2 h-2 rounded-full" style="background:${f(v)}"></span>${v}</div>`).join('')}</div>`;}}; mk(appState.layers.wss,'Soils',getWSSColor); mk(appState.layers.landcover,'Landcover',getLandcoverColor); if(c.innerHTML==='')c.innerHTML='<div class="text-xs text-center text-slate-400 italic">Sin datos activos</div>';}
-        function openPopup(p,pos){ const d=document.createElement('div'); d.className='iw-container p-4'; d.innerHTML='<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div><p class="text-xs">Properties available in raw data.</p>'; infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map); }
+        function openPopup(p,pos){
+            const props = p.feature?.properties || {};
+            const entries = Object.entries(props);
+            const editable = p.type==='sub' || p.type==='drainage';
+            const esc = v=>String(v??'N/A').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+
+            const d=document.createElement('div');
+            d.className='iw-container p-4 min-w-[240px] max-w-[280px]';
+            d.innerHTML=`
+                <div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div>
+                ${editable?`<label class="text-[11px] text-slate-500 font-semibold flex flex-col gap-1 mb-3">
+                    <span>Nombre del polígono</span>
+                    <input id="popup-name" class="border rounded px-2 py-1 text-xs" value="${esc(props.subName||props.name||'')}" placeholder="Ej: SubArea 1" />
+                </label>`:''}
+                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Propiedades</div>
+                <div class="max-h-36 overflow-y-auto space-y-1">
+                    ${entries.length? entries.map(([k,v])=>`<div class="flex justify-between gap-2 text-xs bg-slate-50 rounded px-2 py-1 border border-slate-100">
+                        <span class="font-semibold text-slate-600 truncate">${esc(k)}</span>
+                        <span class="text-right text-slate-500 flex-1">${esc(v)}</span>
+                    </div>`).join('') : '<div class="text-xs text-slate-400">Sin propiedades disponibles.</div>'}
+                </div>
+                <div class="flex justify-end gap-2 mt-3">
+                    ${editable?'<button id="popup-save" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded shadow hover:bg-indigo-700">Guardar</button>':''}
+                    <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
+                </div>
+            `;
+
+            infoWindow.setContent(d);
+            infoWindow.setPosition(pos);
+            infoWindow.open(map);
+
+            const closeBtn=d.querySelector('#popup-close');
+            if(closeBtn) closeBtn.addEventListener('click',()=>infoWindow.close());
+
+            if(editable){
+                const saveBtn=d.querySelector('#popup-save');
+                const nameInput=d.querySelector('#popup-name');
+                if(saveBtn && nameInput){
+                    saveBtn.addEventListener('click',()=>{
+                        const val=nameInput.value.trim();
+                        if(p.feature){
+                            p.feature.properties.subName = val || 'SubArea';
+                            sysLog.add('GIS', `subName actualizado a "${p.feature.properties.subName}"`, 'success');
+                        }
+                        infoWindow.close();
+                    });
+                }
+            }
+        }
         
         // --- CN TABLE & MAPPING UI ---
         function toggleCNModal(){ document.getElementById('cn-modal').classList.toggle('hidden'); renderCNTable(); }
