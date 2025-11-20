@@ -36,7 +36,7 @@
             sysLog.add('MAP', 'Loading Google Maps Engine...', 'process');
             try {
                 const { Map, InfoWindow } = await google.maps.importLibrary("maps");
-                map = new Map(document.getElementById("map"), { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, mapId: 'HYDRO_SYS_LOG', disableDefaultUI: true, zoomControl: false, gestureHandling: 'greedy', styles: [{"featureType":"poi","stylers":[{"visibility":"off"}]}] });
+                map = new Map(document.getElementById("map"), { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, mapId: 'HYDRO_SYS_LOG', disableDefaultUI: true, zoomControl: false, gestureHandling: 'greedy' });
                 infoWindow = new InfoWindow({ minWidth: 260 });
                 sysLog.add('MAP', 'Map Engine Initialized Successfully.', 'success');
                 renderCNTable();
