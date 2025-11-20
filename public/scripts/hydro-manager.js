@@ -159,9 +159,9 @@
                 if(type==='wss'||type==='landcover'){ val=f.properties._standardVal; layer.uniqueValues.add(String(val)); }
                 const s = getStyle(type, val);
                 const poly = new Polygon({ paths, strokeColor:s.s, strokeOpacity:1, strokeWeight:s.w, fillColor:s.f, fillOpacity:s.o, zIndex:layer.zIndex, map:map, clickable:(type==='drainage'||type==='sub')});
-                
-                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,data:{}}, e.latLng));
-                layer.polygons.push({poly});
+
+                if(type==='drainage'||type==='sub') poly.addListener('click', e=>openPopup({poly,type,feature:f}, e.latLng));
+                layer.polygons.push({poly, feature:f});
                 paths.flat().forEach(p=>b.extend(p));
             });
             if(!b.isEmpty()) map.fitBounds(b);
@@ -252,7 +252,104 @@
             if(t==='landcover')return{s:'#fff',f:getLandcoverColor(v),o:0.7,w:0.5};
         }
         function updateLegend(){ const c=document.getElementById('legend-content'); c.innerHTML=''; const mk=(l,t,f)=>{if(l.visible&&l.uniqueValues.size>0){c.innerHTML+=`<div class="mb-4"><div class="text-[10px] font-bold text-slate-400 uppercase border-b mb-1">${t}</div>${[...l.uniqueValues].sort().map(v=>`<div class="flex items-center gap-2 text-[10px] mb-1"><span class="w-2 h-2 rounded-full" style="background:${f(v)}"></span>${v}</div>`).join('')}</div>`;}}; mk(appState.layers.wss,'Soils',getWSSColor); mk(appState.layers.landcover,'Landcover',getLandcoverColor); if(c.innerHTML==='')c.innerHTML='<div class="text-xs text-center text-slate-400 italic">Sin datos activos</div>';}
-        function openPopup(p,pos){ const d=document.createElement('div'); d.className='iw-container p-4'; d.innerHTML='<div class="text-xs font-bold text-indigo-600 border-b mb-2">Feature Info</div><p class="text-xs">Properties available in raw data.</p>'; infoWindow.setContent(d); infoWindow.setPosition(pos); infoWindow.open(map); }
+        function openPopup(p,pos){
+            const props = p.feature?.properties || {};
+            const esc = v=>String(v??'N/A').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+
+            const drainageReady = () => appState.layers.drainage.polygons.length>0 && appState.layers.drainage.polygons.every(pl=>pl.feature?.properties?.dischargePoint);
+            const getDrainagePointList = () => appState.layers.drainage.polygons.map(pl=>pl.feature?.properties?.dischargePoint).filter(Boolean);
+
+            const d=document.createElement('div');
+            d.className='iw-container p-4 min-w-[240px] max-w-[300px]';
+
+            if(p.type==='drainage'){
+                const dpOptions=['DP-1','DP-2','DP-3','DP-4','DP-5'];
+                const current=props.dischargePoint||'';
+                d.innerHTML=`
+                    <div class="text-xs font-bold text-indigo-600 border-b mb-2">Drainage Area</div>
+                    <label class="text-[11px] text-slate-500 font-semibold flex flex-col gap-1 mb-3">
+                        <span>Discharge Point</span>
+                        <select id="popup-dp" class="border rounded px-2 py-2 text-xs">
+                            <option value="">-- Seleccionar --</option>
+                            ${dpOptions.map(opt=>`<option value="${opt}" ${opt===current?'selected':''}>${opt}</option>`).join('')}
+                        </select>
+                    </label>
+                    <div class="flex justify-end gap-2 mt-3">
+                        <button id="popup-save" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded shadow hover:bg-indigo-700">Guardar</button>
+                        <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
+                    </div>
+                `;
+            } else if(p.type==='sub'){
+                const daOptions=Array.from({length:10},(_,i)=>`Drainage Area - ${i+1}`);
+                const current=props.drainageArea||'';
+                const ready = drainageReady();
+                const dpList = getDrainagePointList();
+                d.innerHTML=`
+                    <div class="text-xs font-bold text-amber-600 border-b mb-2">Sub Area</div>
+                    <label class="text-[11px] text-slate-500 font-semibold flex flex-col gap-1 mb-2">
+                        <span>Drainage Area asignada</span>
+                        <select id="popup-da" class="border rounded px-2 py-2 text-xs" ${ready?'':'disabled'}>
+                            <option value="">-- Seleccionar --</option>
+                            ${daOptions.map(opt=>`<option value="${opt}" ${opt===current?'selected':''}>${opt}</option>`).join('')}
+                        </select>
+                    </label>
+                    <div class="text-[11px] text-slate-500 mb-3">
+                        ${ready?`Discharge Points disponibles: <span class="font-semibold text-slate-700">${esc(dpList.join(', ')||'N/A')}</span>`:
+                        '<span class="text-red-600 font-semibold">Asigna un Discharge Point a todas las Drainage Areas antes de continuar.</span>'}
+                    </div>
+                    <div class="flex justify-end gap-2 mt-3">
+                        <button id="popup-save" class="px-3 py-1 text-xs bg-indigo-600 text-white rounded shadow hover:bg-indigo-700" ${ready?'':'disabled'}>Guardar</button>
+                        <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
+                    </div>
+                `;
+            } else {
+                d.innerHTML=`
+                    <div class="text-xs font-bold text-slate-600 border-b mb-2">Feature Info</div>
+                    <div class="text-xs text-slate-500">No hay acciones disponibles para este tipo de capa.</div>
+                    <div class="flex justify-end mt-3">
+                        <button id="popup-close" class="px-3 py-1 text-xs border rounded text-slate-600 hover:bg-slate-50">Cerrar</button>
+                    </div>`;
+            }
+
+            infoWindow.setContent(d);
+            infoWindow.setPosition(pos);
+            infoWindow.open(map);
+
+            const closeBtn=d.querySelector('#popup-close');
+            if(closeBtn) closeBtn.addEventListener('click',()=>infoWindow.close());
+
+            if(p.type==='drainage'){
+                const saveBtn=d.querySelector('#popup-save');
+                const dpSelect=d.querySelector('#popup-dp');
+                if(saveBtn && dpSelect){
+                    saveBtn.addEventListener('click',()=>{
+                        const val=dpSelect.value.trim();
+                        if(!val){ dpSelect.classList.add('border-red-500'); return; }
+                        if(p.feature){
+                            p.feature.properties.dischargePoint=val;
+                            sysLog.add('GIS', `Discharge Point asignado: ${val}`, 'success');
+                        }
+                        infoWindow.close();
+                    });
+                }
+            }
+
+            if(p.type==='sub'){
+                const saveBtn=d.querySelector('#popup-save');
+                const daSelect=d.querySelector('#popup-da');
+                if(saveBtn && daSelect){
+                    saveBtn.addEventListener('click',()=>{
+                        const val=daSelect.value.trim();
+                        if(!val){ daSelect.classList.add('border-red-500'); return; }
+                        if(p.feature){
+                            p.feature.properties.drainageArea=val;
+                            sysLog.add('GIS', `Sub Area asociada a ${val}`, 'success');
+                        }
+                        infoWindow.close();
+                    });
+                }
+            }
+        }
         
         // --- CN TABLE & MAPPING UI ---
         function toggleCNModal(){ document.getElementById('cn-modal').classList.toggle('hidden'); renderCNTable(); }
