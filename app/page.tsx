@@ -4,7 +4,8 @@ import Script from 'next/script';
 import { legacyMarkup } from './legacyMarkup';
 
 export default function Home() {
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+  const googleMapsApiKey =
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyBsEK-S5Kbf5aqYol5eGv8uYcPgLOlObr4';
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-slate-900 relative text-slate-800">

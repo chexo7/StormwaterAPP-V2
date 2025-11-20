@@ -35,9 +35,10 @@
             sysLog.add('SYS', 'Booting HydroManager Pro v2.0...', 'info');
             sysLog.add('MAP', 'Loading Google Maps Engine...', 'process');
             try {
-                const { Map, InfoWindow } = await google.maps.importLibrary("maps");
-                map = new Map(document.getElementById("map"), { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, mapId: 'HYDRO_SYS_LOG', disableDefaultUI: true, zoomControl: false, gestureHandling: 'greedy' });
+                const { Map, InfoWindow, MapTypeControlStyle, ControlPosition } = await google.maps.importLibrary("maps");
+                map = new Map(document.getElementById("map"), { center: { lat: 39.8283, lng: -98.5795 }, zoom: 4, mapId: 'HYDRO_SYS_LOG', disableDefaultUI: false, zoomControl: true, gestureHandling: 'greedy', mapTypeId: 'roadmap', mapTypeControl: true, mapTypeControlOptions: { style: MapTypeControlStyle.HORIZONTAL_BAR, position: ControlPosition.TOP_LEFT, mapTypeIds: ['roadmap','satellite','hybrid','terrain'] } });
                 infoWindow = new InfoWindow({ minWidth: 260 });
+                attachBaseLayerControl();
                 sysLog.add('MAP', 'Map Engine Initialized Successfully.', 'success');
                 renderCNTable();
             } catch (e) {
@@ -45,6 +46,19 @@
                 sysLog.add('MAP', 'Ensure you are online and have a valid API Key configured.', 'warn');
                 updateStatus('map','FAIL','text-red-500');
             }
+        }
+
+        function attachBaseLayerControl(){
+            if(!map) return;
+            const controlDiv=document.createElement('div');
+            controlDiv.className='bg-white/90 backdrop-blur rounded-xl shadow-lg border border-slate-200 flex gap-1 p-1 mt-4 ml-4 pointer-events-auto';
+            const options=[{id:'roadmap',label:'Mapa'},{id:'satellite',label:'Satélite'},{id:'hybrid',label:'Híbrido'},{id:'terrain',label:'Terreno'}];
+            const buttons=new Map();
+            const setActive=(id)=>{buttons.forEach((btn,key)=>{btn.className=`px-3 py-1 text-[10px] font-semibold rounded-lg transition ${key===id?'bg-slate-900 text-white shadow':'text-slate-600 hover:bg-slate-100'}`;});};
+            options.forEach(opt=>{const btn=document.createElement('button');btn.type='button';btn.textContent=opt.label;btn.className='px-3 py-1 text-[10px] font-semibold rounded-lg transition text-slate-600 hover:bg-slate-100';btn.addEventListener('click',()=>{map.setMapTypeId(opt.id);setActive(opt.id);sysLog.add('MAP',`Base ${opt.label} activada.`,'info');});buttons.set(opt.id,btn);controlDiv.appendChild(btn);});
+            setActive((map.getMapTypeId&&map.getMapTypeId())||'roadmap');
+            map.addListener('maptypeid_changed',()=>setActive(map.getMapTypeId()));
+            map.controls[google.maps.ControlPosition.TOP_LEFT].push(controlDiv);
         }
 
         // --- UTILS ---
