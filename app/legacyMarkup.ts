@@ -116,7 +116,7 @@ export const legacyMarkup = `<!-- MAP CANVAS -->
 </div>
 </aside>
 <!-- RIGHT SIDEBAR (System Log) -->
-<aside class="absolute top-24 right-4 bottom-6 w-80 z-20 sidebar-transition transform translate-x-0 flex flex-col gap-4 pointer-events-none" id="sidebar-right">
+<aside class="absolute top-24 right-4 bottom-6 w-80 z-20 sidebar-transition transform translate-x-[120%] flex flex-col gap-4 pointer-events-none" id="sidebar-right">
 <div class="bg-slate-900 rounded-2xl flex-1 flex flex-col overflow-hidden shadow-2xl pointer-events-auto border border-slate-800" id="log-panel">
 <div class="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
 <div class="flex items-center gap-2">
